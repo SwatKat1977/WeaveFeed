@@ -3,3 +3,7 @@
 
 # Ignore the database data directories
 docker/data
+
+# Ignore the virtual environment directory (common variations)
+.venv
+venv
