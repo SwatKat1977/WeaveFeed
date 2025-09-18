@@ -7,12 +7,15 @@ root for full license details.
 """
 import asyncio
 import logging
+import os
 from weavefeed_common import __version__
+from weavefeed_common.configuration.configuration import Configuration
 from weavefeed_common.base_microservice_application \
     import BaseMicroserviceApplication
 from weavefeed_common.logging_consts import LOGGING_DATETIME_FORMAT_STRING, \
                                             LOGGING_DEFAULT_LOG_LEVEL, \
                                             LOGGING_LOG_FORMAT_STRING
+from configuration_layout import CONFIGURATION_LAYOUT
 
 
 class Application(BaseMicroserviceApplication):
@@ -35,6 +38,30 @@ class Application(BaseMicroserviceApplication):
                           __version__)
         self._logger.info("https://github.com/SwatKat1977/WeaveFeed")
 
+        config_file = os.getenv("WEAVEFEED_ACCOUNTS_CONFIG_FILE", None)
+        config_file_required: bool = os.getenv(
+            "WEAVEFEED_ACCOUNTS_CONFIG_FILE_REQUIRED",
+            "false").lower() == "true"
+        if not config_file and config_file_required:
+            print("[FATAL ERROR] Configuration file missing!")
+            return False
+
+        self._config = Configuration()
+        self._config.configure(CONFIGURATION_LAYOUT,
+                               config_file,
+                               config_file_required)
+
+        try:
+            self._config.process_config()
+
+        except ValueError as ex:
+            self._logger.critical("Configuration error : %s", ex)
+            return False
+
+        self._logger.setLevel(self._config.get_entry("logging", "log_level"))
+
+        self._display_configuration_details()
+
         return True
 
     async def _main_loop(self) -> None:
@@ -43,3 +70,10 @@ class Application(BaseMicroserviceApplication):
 
     async def _shutdown(self):
         """ Shutdown logic. """
+
+    def _display_configuration_details(self):
+        self._logger.info("Configuration")
+        self._logger.info("=============")
+        self._logger.info("[logging]")
+        self._logger.info("=> Logging log level              : %s",
+                          self._config.get_entry("logging", "log_level"))
