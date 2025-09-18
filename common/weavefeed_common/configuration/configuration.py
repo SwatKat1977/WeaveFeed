@@ -74,12 +74,12 @@ class Configuration:
                 files_read = self._parser.read(self._config_file)
             except configparser.ParsingError as ex:
                 raise ValueError(
-                    f"[ConfigError] Failed to parse file '{self._config_file}'"
+                    f"Failed to parse config file '{self._config_file}'"
                     f": {ex}") from ex
 
             if not files_read and self._config_file_required:
                 raise ValueError(
-                    f"[ConfigError] Required config file '{self._config_file}'"
+                    f"Required config file '{self._config_file}' "
                     "could not be opened."
                 )
 
@@ -105,7 +105,7 @@ class Configuration:
         try:
             return self._config_items[section][item]
         except KeyError as ex:
-            raise ValueError(f"[ConfigError] Invalid key '{section}::{item}'") \
+            raise ValueError(f"Invalid key '{section}::{item}'") \
                 from ex
 
     # -------------------------
@@ -137,7 +137,7 @@ class Configuration:
                          item: ConfigurationSetupItem,
                          value: typing.Any) -> typing.Any:
         if value is None and item.is_required:
-            raise ValueError(f"[ConfigError] Missing required '{section}::"
+            raise ValueError(f"Missing required '{section}::"
                              f"{item.item_name}'")
         return value
 
@@ -156,8 +156,8 @@ class Configuration:
 
         if item.valid_values and value not in item.valid_values:
             raise ValueError(
-                f"[ConfigError] '{section}::{item.item_name}' has invalid value '{value}', "
-                f"expected one of {item.valid_values}"
+                f"Config '{section}::{item.item_name}' has invalid value "
+                f"'{value}', expected one of {item.valid_values}"
             )
         return str(value)
 
@@ -174,7 +174,7 @@ class Configuration:
             return int(value)
         except (ValueError, TypeError) as ex:
             raise ValueError(
-                f"[ConfigError] '{section}::{item.item_name}' has invalid "
+                f"Config item '{section}::{item.item_name}' has invalid "
                 f"int '{value}'"
             ) from ex
 
@@ -198,7 +198,7 @@ class Configuration:
                 return False
 
         raise ValueError(
-            f"[ConfigError] '{section}::{item.item_name}' has invalid boolean "
+            f"Config item '{section}::{item.item_name}' has invalid boolean "
             f"'{value}'"
         )
 
@@ -215,7 +215,7 @@ class Configuration:
             return float(value)
         except (ValueError, TypeError) as ex:
             raise ValueError(
-                f"[ConfigError] '{section}::{item.item_name}' has invalid "
+                f"Config item '{section}::{item.item_name}' has invalid "
                 f"float '{value}'"
             ) from ex
 
@@ -227,7 +227,7 @@ class Configuration:
             return None
         if value < 0:
             raise ValueError(
-                f"[ConfigError] '{section}::{item.item_name}' has invalid "
+                f"Config item '{section}::{item.item_name}' has invalid "
                 f"unsigned int '{value}'"
             )
         return value
@@ -244,7 +244,7 @@ class Configuration:
                 reader = self._readers.get(section_item.item_type)
                 if not reader:
                     raise ValueError(
-                        f"[ConfigError] Unsupported type "
+                        f"Config item has unsupported type "
                         f"'{section_item.item_type}' "
                         f"for '{section_name}::{section_item.item_name}'"
                     )
