@@ -2,4 +2,4 @@
 .env
 
 # Ignore the database data directories
-data/accounts
+docker/data
