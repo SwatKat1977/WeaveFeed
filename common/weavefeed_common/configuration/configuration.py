@@ -1,9 +1,17 @@
+"""
+Copyright (C) 2025  WeaveFeed Development Team
+SPDX-License-Identifier: AGPL-3.0-or-later
+
+This file is part of WeaveFeed. See the LICENSE file in the project
+root for full license details.
+"""
 import configparser
 import os
 import typing
-from shared.configuration.configuration_setup import (ConfigItemDataType,
-                                                      ConfigurationSetup,
-                                                      ConfigurationSetupItem)
+from weavefeed_common.configuration.configuration_setup import \
+        ConfigItemDataType, \
+        ConfigurationSetup, \
+        ConfigurationSetupItem
 
 
 class Configuration:
@@ -96,8 +104,9 @@ class Configuration:
 
         try:
             return self._config_items[section][item]
-        except KeyError:
-            raise ValueError(f"[ConfigError] Invalid key '{section}::{item}'")
+        except KeyError as ex:
+            raise ValueError(f"[ConfigError] Invalid key '{section}::{item}'") \
+                from ex
 
     # -------------------------
     # Internal helpers
