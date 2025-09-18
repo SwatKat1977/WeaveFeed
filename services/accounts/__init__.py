@@ -6,6 +6,7 @@ This file is part of WeaveFeed. See the LICENSE file in the project
 root for full license details.
 """
 import asyncio
+import os
 import sys
 from quart import Quart
 from application import Application
@@ -13,7 +14,7 @@ from application import Application
 # Quart application instance
 app = Quart(__name__)
 
-application = Application(app)
+SERVICE_APP: Application = Application(app)
 
 
 @app.before_serving
@@ -24,7 +25,10 @@ async def startup() -> None:
     returns:
         None
     """
-    app.service_task = asyncio.ensure_future(application.run())
+    if not await SERVICE_APP.initialise():
+        os._exit(1)
+
+    app.background_task = asyncio.create_task(SERVICE_APP.run())
 
 
 @app.after_serving
@@ -35,7 +39,11 @@ async def shutdown() -> None:
     returns:
         None
     """
-    application.stop()
-
-if not application.initialise():
-    sys.exit()
+    SERVICE_APP.shutdown_event.set()
+    task = getattr(app, "background_task", None)
+    if task:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
