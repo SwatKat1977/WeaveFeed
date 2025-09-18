@@ -1,0 +1,5 @@
+# The Docker .env should not be in the repo as it contains passwords etc.
+.env
+
+# Ignore the database data directories
+docker/data
