@@ -7,6 +7,7 @@ root for full license details.
 """
 import asyncio
 import logging
+from weavefeed_common import __version__
 from weavefeed_common.base_microservice_application \
     import BaseMicroserviceApplication
 from weavefeed_common.logging_consts import LOGGING_DATETIME_FORMAT_STRING, \
@@ -30,6 +31,10 @@ class Application(BaseMicroserviceApplication):
         self._logger.addHandler(console_stream)
 
     async def _initialise(self) -> bool:
+        self._logger.info("WeaveFeed Account Microservice %s",
+                          __version__)
+        self._logger.info("https://github.com/SwatKat1977/WeaveFeed")
+
         return True
 
     async def _main_loop(self) -> None:
