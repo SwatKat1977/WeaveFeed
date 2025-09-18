@@ -3,3 +3,10 @@
 
 # Ignore the database data directories
 docker/data
+
+# Ignore the virtual environment directory (common variations)
+.venv
+venv
+
+# Python intermediate files
+__pycache__
