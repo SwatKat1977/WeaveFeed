@@ -13,15 +13,14 @@ NOTE: For WeaveFeed this has already been done, but for reference
 
 ** Required PIP library **
 
-pip install alembic
+pip install alembic psycopg2 passlib[bcrypt]
 
 ** Initialising Alembic **
 
 * First change into service directory (e.g. services/accounts)
 * Run `alembic init alembic`
 * Edit the alembic.ini file and update the sqlalchemy.url field,
-  e.g. postgresql+psycopg2://weavefeed:password@db:5432/weavefeed) or
-  replace with an environment variable (e.g. ${DATABASE_URL})
+  e.g. postgresql+psycopg2://weavefeed:password@db:5432/weavefeed)
 
 ** Create First Migration **
 
@@ -40,35 +39,39 @@ To do this edit the xxxx_init_schema.py and update the upgrade() method.
 Below is an example how to seed a user into the database:
 
 ```
+from datetime import datetime
+import uuid
+from passlib.hash import bcrypt
+
     # seed admin user
     admin_id = str(uuid.uuid4())
     password_hash = bcrypt.hash("WeaveFeed_Admin")
+    now = datetime.utcnow()
 
     op.execute(
-        sa.text(
-            "INSERT INTO users (id, username, email, password_hash, is_verified) "
-            "VALUES (:id, :username, :email, :password_hash, true)"
-        ),
-        {
-            "id": admin_id,
-            "username": "admin",
-            "email": "admin@weavefeed.local",
-            "password_hash": password_hash,
-        },
+        f"""
+        INSERT INTO users (id, username, email, password_hash, is_verified, is_active, created_at, updated_at)
+        VALUES ('{admin_id}', 'admin', 'admin@weavefeed.local', '{password_hash}', true, true, '{now}', '{now}')
+        ON CONFLICT (username) DO NOTHING
+        """
     )
 
     op.execute(
-        sa.text(
-            "INSERT INTO profiles (id, user_id, display_name, bio) "
-            "VALUES (:id, :user_id, :display_name, :bio)"
-        ),
-        {
-            "id": str(uuid.uuid4()),
-            "user_id": admin_id,
-            "display_name": "Administrator",
-            "bio": "Default admin account",
-        },
+        f"""
+        INSERT INTO user_profiles (id, user_id, display_name, created_at, updated_at)
+        VALUES ('{uuid.uuid4()}', '{admin_id}', 'Administrator', '{now}', '{now}')
+        ON CONFLICT (user_id) DO NOTHING
+        """
     )
 ```
 
 ### Database Management
+
+To perform a migration you need to run `alembic upgrade head`
+
+To recreate the database
+
+```
+DROP DATABASE accounts;
+CREATE DATABASE accounts;
+```
