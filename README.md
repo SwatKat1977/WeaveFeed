@@ -5,6 +5,7 @@ Open source Social Media platform
 
 ### Pip Libraries required:
 * Quart
+* asyncpg
 
 ### First Time Alembic Setup
 
