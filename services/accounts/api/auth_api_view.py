@@ -16,8 +16,14 @@ class PasswordSignupRequest(BaseModel):
     password: str
 
 
-class AuthApiView(BaseApiView):
+class OAuthSignupRequest(BaseModel):
+    provider_uid: str
+    access_token: str
+    refresh_token: typing.Optional[str]
+    expires_at: typing.Optional[datetime]
 
+
+class AuthApiView(BaseApiView):
     def __init__(self, logger: logging.Logger) -> None:
         self._logger = logger.getChild(__name__)
 
