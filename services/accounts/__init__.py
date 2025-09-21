@@ -7,6 +7,7 @@ root for full license details.
 """
 import asyncio
 import os
+import random
 from quart import g, Quart, request
 from application import Application
 import asyncpg
@@ -47,10 +48,10 @@ async def startup() -> None:
     if not await SERVICE_APP.initialise():
         os._exit(1)
 
-    app.background_task = asyncio.create_task(SERVICE_APP.run())
-
     # clean, just call helper
     app.db_pool = await create_db_pool(DatabaseConfig)
+
+    app.background_task = asyncio.create_task(SERVICE_APP.run())
 
 
 @app.after_serving
@@ -100,40 +101,60 @@ async def release_connection(response):
     return response
 
 
-async def create_db_pool(config) -> asyncpg.pool.Pool:
+async def create_db_pool(config,
+                         retries: int=5,
+                         base_delay: float=1.0
+                         ) -> asyncpg.pool.Pool:
     """
     Create and return an asyncpg pool with proper error handling.
     """
-    try:
-        return await asyncpg.create_pool(
-            user=config.DB_USER,
-            password=config.DB_PASSWORD,
-            database=config.DB_NAME,
-            host=config.DB_HOST,
-            port=config.DB_PORT,
-            min_size=1,
-            max_size=10,
-            timeout=5.0
-        )
+    for attempt in range(1, retries + 1):
+        try:
+            return await asyncpg.create_pool(
+                user=config.DB_USER,
+                password=config.DB_PASSWORD,
+                database=config.DB_NAME,
+                host=config.DB_HOST,
+                port=config.DB_PORT,
+                min_size=1,
+                max_size=10,
+                timeout=5.0
+            )
 
-    except asyncpg.InvalidPasswordError:
-        print("[FATAL] Database authentication failed (check user/password).")
+        except asyncpg.InvalidPasswordError:
+            print("[FATAL] Database authentication failed (check user/"
+                  "password).")
+            break
 
-    except asyncpg.InvalidCatalogNameError:
-        print(f"[FATAL] Database '{config.DB_NAME}' does not exist.")
+        except asyncpg.InvalidCatalogNameError:
+            print(f"[FATAL] Database '{config.DB_NAME}' does not exist.")
+            break
 
-    except asyncpg.CannotConnectNowError:
-        print("[FATAL] Database is starting up or cannot accept connections "
-              "right now.")
+        except asyncpg.CannotConnectNowError:
+            print("[FATAL] Database is starting up or cannot accept connections "
+                  "right now.")
 
-    except asyncio.TimeoutError:
-        print("[FATAL] Database connection timed out.")
+        except asyncio.TimeoutError:
+            print("[FATAL] Database connection timed out.")
 
-    except OSError as ex:
-        print(f"[FATAL] Network/connection error: {ex}")
+        except OSError as ex:
+            print(f"[FATAL] Network/connection error: {ex}")
 
-    except asyncpg.PostgresError as ex:
-        print(f"[FATAL] General Postgres error: {ex}")
+        except asyncpg.PostgresError as ex:
+            print(f"[FATAL] General Postgres error: {ex}")
+
+        # Retry-able errors
+        delay = base_delay * (2 ** (attempt - 1))  # exponential backoff
+        jitter = random.uniform(0, 0.3 * delay)   # add jitter
+        wait_time = delay + jitter
+
+        if attempt < retries:
+            print(f"[INFO] Retrying in {wait_time:.1f}s...")
+            await asyncio.sleep(wait_time)
+            continue
+        else:
+            print("[FATAL] All retries exhausted. Could not connect to DB.")
+            break
 
     if app is not None:
         await cancel_background_tasks()
