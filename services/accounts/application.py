@@ -15,6 +15,7 @@ from weavefeed_common.base_microservice_application \
 from weavefeed_common.logging_consts import LOGGING_DATETIME_FORMAT_STRING, \
                                             LOGGING_DEFAULT_LOG_LEVEL, \
                                             LOGGING_LOG_FORMAT_STRING
+from api import create_routes
 from configuration_layout import CONFIGURATION_LAYOUT
 
 
@@ -61,6 +62,8 @@ class Application(BaseMicroserviceApplication):
         self._logger.setLevel(self._config.get_entry("logging", "log_level"))
 
         self._display_configuration_details()
+
+        self._quart_instance.register_blueprint(create_routes(self._logger))
 
         return True
 
