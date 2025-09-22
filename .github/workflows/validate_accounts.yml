@@ -45,10 +45,14 @@ jobs:
 
       - name: Ruff (accounts only)
         if: steps.detect.outputs.accounts_svc_changed == 'true'
+        env:
+          PYTHONPATH: services/accounts;common
         run: ruff check services/accounts
 
       - name: Pylint (accounts only)
         if: steps.detect.outputs.accounts_svc_changed == 'true'
+        env:
+          PYTHONPATH: services/accounts;common
         run: pylint services/accounts
 
       - name: Unit tests (accounts only)
