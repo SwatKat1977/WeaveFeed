@@ -10,3 +10,4 @@ venv
 
 # Python intermediate files
 __pycache__
+.idea
