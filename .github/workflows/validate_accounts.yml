@@ -17,12 +17,12 @@ jobs:
       - name: Detect changes in accounts service
         id: detect
         run: |
-          echo "Checking for changes in service/accounts/ or tests/accounts/"
+          echo "Checking for changes in services/accounts/ or tests/accounts/"
           if git diff --name-only origin/${{ github.event.pull_request.base.ref }} \
             ${{ github.event.pull_request.head.sha }} \
-              | grep -qE '^service/accounts/|^tests/accounts/'; then
+              | grep -qE '^services/accounts/|^tests/accounts/'; then
             echo "accounts_svc_changed=true" >> $GITHUB_OUTPUT
-            echo "[INFO] service/accounts or tests/accounts has changed"
+            echo "[INFO] services/accounts or tests/accounts has changed"
           else
             echo "accounts_svc_changed=false" >> $GITHUB_OUTPUT
             echo "[INFO] No changes detected in accounts service"
@@ -38,12 +38,12 @@ jobs:
         if: steps.detect.outputs.accounts_svc_changed == 'true'
         run: |
           python -m pip install --upgrade pip
-          if [ -f service/accounts/requirements.txt ]; then pip install -r service/accounts/requirements.txt; fi
+          if [ -f services/accounts/requirements.txt ]; then pip install -r services/accounts/requirements.txt; fi
           pip install ruff
 
       - name: Ruff (accounts only)
         if: steps.detect.outputs.accounts_svc_changed == 'true'
-        run: ruff check service/accounts tests/accounts
+        run: ruff check services/accounts tests/accounts
 
       - name: Unit tests (accounts only)
         if: steps.detect.outputs.accounts_svc_changed == 'true'
