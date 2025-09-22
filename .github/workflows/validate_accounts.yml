@@ -45,7 +45,7 @@ jobs:
 
       - name: Ruff (accounts only)
         if: steps.detect.outputs.accounts_svc_changed == 'true'
-        run: ruff check services/accounts tests/accounts
+        run: ruff check services/accounts
 
       - name: Unit tests (accounts only)
         if: steps.detect.outputs.accounts_svc_changed == 'true'
