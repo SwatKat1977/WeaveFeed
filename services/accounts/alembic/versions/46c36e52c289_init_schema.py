@@ -64,6 +64,15 @@ def upgrade() -> None:
     )
     # ### end Alembic commands ###
 
+    # Alter the column to have default FALSE and be NOT NULL
+    op.alter_column(
+        "users",
+        "is_verified",
+        existing_type=sa.Boolean(),
+        server_default=sa.text("false"),
+        nullable=False,
+    )
+
     # seed admin user
     admin_id = str(uuid.uuid4())
     password_hash = bcrypt.hash("WeaveFeed_Admin")
