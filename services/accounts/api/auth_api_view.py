@@ -75,7 +75,7 @@ class AuthApiView(BaseApiView):
         )
         if existing:
             return quart.jsonify({"error": "Account already linked"}), \
-                409
+                HTTPStatus.CONFLICT
 
         # Use verified email if available, else fallback
         email: typing.Optional[str] = None
@@ -96,7 +96,8 @@ class AuthApiView(BaseApiView):
             email_verified=email_verified,
         )
 
-        return quart.jsonify({"user_id": user_id}), 201
+        return quart.jsonify({"user_id": user_id}), \
+            HTTPStatus.CREATED
 
     async def _create_user(self,
                            username: str,
