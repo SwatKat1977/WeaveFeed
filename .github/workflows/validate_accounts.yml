@@ -13,14 +13,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # fetch full history so we can diff against origin/main
 
       - name: Detect changes in accounts service
         id: detect
         run: |
           echo "Checking for changes in services/accounts/ or tests/accounts/"
-          if git diff --name-only origin/${{ github.event.pull_request.base.ref }} \
-            ${{ github.event.pull_request.head.sha }} \
-              | grep -qE '^services/accounts/|^tests/accounts/'; then
+          BASE_REF="${{ github.base_ref || 'main' }}"
+          if git diff --name-only origin/$BASE_REF ${{ github.sha }} \
+            | grep -qE '^services/accounts/|^tests/accounts/'; then
             echo "accounts_svc_changed=true" >> $GITHUB_OUTPUT
             echo "[INFO] services/accounts or tests/accounts has changed"
           else
