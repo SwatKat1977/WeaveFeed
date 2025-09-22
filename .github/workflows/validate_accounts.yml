@@ -41,11 +41,15 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f services/accounts/requirements.txt ]; then pip install -r services/accounts/requirements.txt; fi
-          pip install ruff
+          pip install ruff pylint
 
       - name: Ruff (accounts only)
         if: steps.detect.outputs.accounts_svc_changed == 'true'
         run: ruff check services/accounts
+
+      - name: Pylint (accounts only)
+        if: steps.detect.outputs.accounts_svc_changed == 'true'
+        run: pylint services/accounts
 
       - name: Unit tests (accounts only)
         if: steps.detect.outputs.accounts_svc_changed == 'true'
