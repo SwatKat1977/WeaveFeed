@@ -50,7 +50,7 @@ class DatabaseConfig:
     DB_PASSWORD = os.getenv("WEAVEFEED_ACCOUNTS_DB_PASSWORD", "__INVALID__")
     DB_NAME = os.getenv("WEAVEFEED_ACCOUNTS_DB_NAME", "__INVALID__")
     DB_HOST = os.getenv("WEAVEFEED_ACCOUNTS_DB_HOST", "127.0.0.1")
-    DB_PORT = int(os.getenv("WEAVEFEED_ACCOUNTS_DB_PORT", 5432))
+    DB_PORT = int(os.getenv("WEAVEFEED_ACCOUNTS_DB_PORT", "5432"))
 
 
 async def cancel_background_tasks():
