@@ -39,7 +39,7 @@ class AuthProvider(CreatedUpdatedTimestampMixin, Base):
     Table constraints:
         uq_provider_uid: Ensures uniqueness of `(provider, provider_uid)` pairs.
     """
-    # pylint: disable=too-few-public-methods
+    # pylints: _disable=too-few-public-methods
     __tablename__ = "auth_providers"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
