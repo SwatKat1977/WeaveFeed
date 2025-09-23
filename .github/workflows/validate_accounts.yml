@@ -1,0 +1,64 @@
+name: Validate Accounts Service
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+
+jobs:
+  accounts-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # fetch full history so we can diff against origin/main
+
+      - name: Detect changes in accounts service
+        id: detect
+        run: |
+          echo "Checking for changes in services/accounts/ or tests/accounts/"
+          BASE_REF="${{ github.base_ref || 'main' }}"
+          if git diff --name-only origin/$BASE_REF ${{ github.sha }} \
+            | grep -qE '^services/accounts/|^tests/accounts/'; then
+            echo "accounts_svc_changed=true" >> $GITHUB_OUTPUT
+            echo "[INFO] services/accounts or tests/accounts has changed"
+          else
+            echo "accounts_svc_changed=false" >> $GITHUB_OUTPUT
+            echo "[INFO] No changes detected in accounts service"
+          fi
+
+      - name: Set up Python
+        if: steps.detect.outputs.accounts_svc_changed == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        if: steps.detect.outputs.accounts_svc_changed == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f services/accounts/requirements.txt ]; then pip install -r services/accounts/requirements.txt; fi
+          pip install ruff pylint coverage
+
+      - name: Ruff (accounts only)
+        if: steps.detect.outputs.accounts_svc_changed == 'true'
+        env:
+          PYTHONPATH: services/accounts:common
+        run: ruff check services/accounts
+
+      - name: Pylint (accounts only)
+        if: steps.detect.outputs.accounts_svc_changed == 'true'
+        env:
+          PYTHONPATH: services/accounts:common
+        run: pylint services/accounts
+
+      - name: Unit tests (accounts only)
+        if: steps.detect.outputs.accounts_svc_changed == 'true'
+        env:
+          PYTHONPATH: services/accounts:common
+        run: |
+          coverage run --branch -m unittest discover -s tests/accounts -p "test_*.py" -v
+          coverage report -m

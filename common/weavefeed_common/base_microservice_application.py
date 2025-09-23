@@ -100,11 +100,11 @@ class BaseMicroserviceApplication(abc.ABC):
                 await asyncio.sleep(0.1)
 
         except KeyboardInterrupt:
-            self._logger.info("Keyboard interrupt received.")
+            self._logger.debug("Service: Keyboard interrupt received.")
             self._shutdown_event.set()
 
         except asyncio.CancelledError:
-            self._logger.info("Cancellation received.")
+            self._logger.debug("Service: Cancellation received.")
             raise
 
         finally:

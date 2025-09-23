@@ -5,6 +5,7 @@ Open source Social Media platform
 
 ### Pip Libraries required:
 * Quart
+* asyncpg
 
 ### First Time Alembic Setup
 
@@ -13,7 +14,12 @@ NOTE: For WeaveFeed this has already been done, but for reference
 
 ** Required PIP library **
 
-pip install alembic psycopg2 passlib[bcrypt]
+pip install:
+* alembic
+* psycopg2
+* passlib[bcrypt]
+* pydantic
+* pydantic[email]
 
 ** Initialising Alembic **
 

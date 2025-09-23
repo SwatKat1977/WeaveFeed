@@ -1,0 +1,7 @@
+alembic
+asyncpg
+passlib[bcrypt]
+psycopg2
+pydantic
+pydantic[email]
+quart
