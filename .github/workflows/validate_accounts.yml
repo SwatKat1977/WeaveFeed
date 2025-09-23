@@ -60,5 +60,5 @@ jobs:
         env:
           PYTHONPATH: services/accounts:common
         run: |
-          coverage run --branch -m unittest discover -s tests/accounts -p "test_*.py" -v
+          coverage run --rcfile=services/accounts/.coveragerc_accounts --branch -m unittest discover -s tests/accounts -p "test_*.py" -v
           coverage report -m
