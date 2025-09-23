@@ -10,7 +10,7 @@ from http import HTTPStatus
 import logging
 import typing
 import uuid
-import bcrypt
+from passlib.hash import bcrypt
 from pydantic import BaseModel, EmailStr, ValidationError
 import quart
 from weavefeed_common.base_api_view import BaseApiView
@@ -45,6 +45,11 @@ class OAuthSignupRequest(BaseModel):
     access_token: str
     refresh_token: typing.Optional[str]
     expires_at: typing.Optional[datetime]
+
+
+class PasswordLoginRequest(BaseModel):
+    username_or_email: str
+    password: str
 
 
 class AuthApiView(BaseApiView):
@@ -156,11 +161,55 @@ class AuthApiView(BaseApiView):
         return quart.jsonify({"user_id": user_id}), \
             HTTPStatus.CREATED
 
+    async def login_password(self):
+        data = await quart.request.get_json()
+        try:
+            req = PasswordLoginRequest(**data)
+        except Exception as e:
+            return quart.jsonify({"error": str(e)}), HTTPStatus.BAD_REQUEST
+
+        # Find user by username OR email
+        user = await quart.g.db.fetchrow(
+            """
+            SELECT id, username, email, password_hash, is_active, is_verified
+            FROM users
+            WHERE username = $1 OR email = $1
+            """,
+            req.username_or_email,
+        )
+
+        if not user:
+            return quart.jsonify({"error": "Invalid credentials"}), \
+                HTTPStatus.UNAUTHORIZED
+
+        if not user["is_active"]:
+            return quart.jsonify({"error": "Account disabled"}), \
+                HTTPStatus.FORBIDDEN
+
+        if not user["password_hash"] or not bcrypt.verify(
+                req.password, user["password_hash"]):
+            return quart.jsonify({"error": "Invalid credentials"}), \
+                HTTPStatus.UNAUTHORIZED
+
+        # Update last_login
+        await quart.g.db.execute(
+            "UPDATE users SET last_login=$1 WHERE id=$2",
+            datetime.utcnow(), user["id"]
+        )
+
+        return quart.jsonify({
+            "message": "Login successful",
+            "user_id": str(user["id"]),
+            "username": user["username"],
+            "email": user["email"],
+            "is_verified": user["is_verified"],
+        }), HTTPStatus.OK
+
     async def _create_user(self,
                            username: str,
                            email: str,
                            password: typing.Optional[str] = None,
-                           email_verified: bool=False) -> uuid.UUID:
+                           email_verified: bool = False) -> uuid.UUID:
         """
         Create a new user in the database.
 
@@ -176,10 +225,7 @@ class AuthApiView(BaseApiView):
         password_hash = None
 
         if password:
-            password_hash = bcrypt.hashpw(password.encode(),
-                                          bcrypt.gensalt()).decode()
-
-        email_is_verified: str = "FALSE" if not email_verified else "TRUE"
+            password_hash = bcrypt.hash(password)
 
         await quart.g.db.execute(
             """
@@ -187,7 +233,7 @@ class AuthApiView(BaseApiView):
                               is_verified, created_at, updated_at)
             VALUES ($1, $2, $3, $4, FALSE, $5, $6, $6)
             """,
-            user_id, username, email, password_hash, email_is_verified,
+            user_id, username, email, password_hash, email_verified,
             datetime.now(timezone.utc)
         )
         return user_id
