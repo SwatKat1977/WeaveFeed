@@ -513,7 +513,7 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
             "id": uuid.uuid4(),
             "username": "bob",
             "email": "bob@example.com",
-            "password_hash": bcrypt.hash("secret"),
+            "password_hash": bcrypt.hash("secret".encode("utf-8")),
             "is_active": False,
             "is_verified": False,
         }
@@ -537,7 +537,7 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
             "id": uuid.uuid4(),
             "username": "bob",
             "email": "bob@example.com",
-            "password_hash": bcrypt.hash("secret"),
+            "password_hash": bcrypt.hash("secret".encode("utf-8")),
             "is_active": True,
             "is_verified": False,
         }
