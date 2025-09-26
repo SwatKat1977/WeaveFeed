@@ -1,0 +1,79 @@
+{
+	"info": {
+		"_postman_id": "f4aebf69-1007-42d6-ab65-856a308c56aa",
+		"name": "WeaveFeed",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "10935426"
+	},
+	"item": [
+		{
+			"name": "Accounts Service",
+			"item": [
+				{
+					"name": "signup : Password",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"username\": \"wombler\",\r\n    \"email\": \"EmailStrere@wobbler.com\",\r\n    \"password\": \"P@ssw0rd\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:2222/auth/signup_password",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "2222",
+							"path": [
+								"auth",
+								"signup_password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login: Password",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"username_or_email\": \"admin@weavefeed.local\",\r\n    \"password\": \"WeaveFeed_Admin\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://127.0.0.1:2222/auth/login_password",
+							"protocol": "http",
+							"host": [
+								"127",
+								"0",
+								"0",
+								"1"
+							],
+							"port": "2222",
+							"path": [
+								"auth",
+								"login_password"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

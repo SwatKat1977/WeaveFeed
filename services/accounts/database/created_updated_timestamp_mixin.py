@@ -25,10 +25,10 @@ class CreatedUpdatedTimestampMixin:
             whenever the row is updated. Cannot be null.
     """
     # pylint: disable=too-few-public-methods
-    created_at = Column(DateTime,
+    created_at = Column(DateTime(timezone=True),
                         default=lambda: datetime.now(timezone.utc),
                         nullable=False)
-    updated_at = Column(DateTime,
+    updated_at = Column(DateTime(timezone=True),
                         default=lambda: datetime.now(timezone.utc),
                         onupdate=lambda: datetime.now(timezone.utc),
                         nullable=False)
