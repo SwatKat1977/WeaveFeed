@@ -562,7 +562,7 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
             "id": user_id,
             "username": "bob",
             "email": "bob@example.com",
-            "password_hash": bcrypt.hash("secret"),
+            "password_hash": bcrypt.hash("secret".encode("utf-8")),
             "is_active": True,
             "is_verified": True,
         }
