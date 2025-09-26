@@ -48,6 +48,14 @@ class OAuthSignupRequest(BaseModel):
 
 
 class PasswordLoginRequest(BaseModel):
+    """
+    Request body schema for logging in with a password-based account.
+
+    Attributes:
+        username_or_email (str): Either the username or email of the user.
+        password (str): The plaintext password provided by the user. This will
+            be validated against the stored password hash in the database.
+    """
     username_or_email: str
     password: str
 
@@ -162,10 +170,27 @@ class AuthApiView(BaseApiView):
             HTTPStatus.CREATED
 
     async def login_password(self):
+        """
+        Handle user login via username/email and password.
+
+        Steps:
+            1. Parse and validate the request body against PasswordLoginRequest.
+            2. Look up the user by username OR email in the database.
+            3. Verify that the account is active and the password matches.
+            4. Update the user's last_login timestamp.
+            5. Return a success response with basic user details.
+
+        Returns:
+            JSON response with:
+                - 200 OK: Login successful.
+                - 400 Bad Request: Invalid request body.
+                - 401 Unauthorized: Invalid credentials.
+                - 403 Forbidden: Account disabled.
+        """
         data = await quart.request.get_json()
         try:
             req = PasswordLoginRequest(**data)
-        except Exception as e:
+        except ValidationError as e:
             return quart.jsonify({"error": str(e)}), HTTPStatus.BAD_REQUEST
 
         # Find user by username OR email
