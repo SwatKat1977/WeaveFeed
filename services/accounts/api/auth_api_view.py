@@ -188,6 +188,11 @@ class AuthApiView(BaseApiView):
                 - 403 Forbidden: Account disabled.
         """
         data = await quart.request.get_json()
+
+        if not data:
+            return quart.jsonify({"error": "Invalid or missing JSON body"}), \
+                HTTPStatus.BAD_REQUEST
+
         try:
             req = PasswordLoginRequest(**data)
         except ValidationError as e:

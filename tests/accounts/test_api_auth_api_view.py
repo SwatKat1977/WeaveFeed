@@ -475,64 +475,6 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(ts, datetime)
         self.assertEqual(ts.tzinfo, timezone.utc)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     async def test_login_password_invalid_json_body(self):
         """Should return 400 if request JSON is invalid"""
         app = Quart(__name__)
