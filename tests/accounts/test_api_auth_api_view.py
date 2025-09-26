@@ -508,11 +508,13 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
         """Should return 403 if user is inactive"""
         app = Quart(__name__)
 
+        KNOWN_SECRET_HASH = "$2b$12$CjWS5UHzH5zT0eElA2uY0O6SPo6e7i/VR0su5s.7Z6l0xGmV/0ae6"
+
         fake_user = {
             "id": uuid.uuid4(),
             "username": "bob",
             "email": "bob@example.com",
-            "password_hash": bcrypt.hash("secret".encode("utf-8")),
+            "password_hash": KNOWN_SECRET_HASH,
             "is_active": False,
             "is_verified": False,
         }
@@ -561,11 +563,15 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
         """Should return 200 and user details if login succeeds"""
         app = Quart(__name__)
         user_id = uuid.uuid4()
+
+        # Using 'known hash' due to bug in passlib
+        KNOWN_SECRET_HASH = "$2b$12$CjWS5UHzH5zT0eElA2uY0O6SPo6e7i/VR0su5s.7Z6l0xGmV/0ae6"
+
         fake_user = {
             "id": user_id,
             "username": "bob",
             "email": "bob@example.com",
-            "password_hash": bcrypt.hash("secret".encode("utf-8")),
+            "password_hash": KNOWN_SECRET_HASH,
             "is_active": True,
             "is_verified": True,
         }
