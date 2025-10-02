@@ -10,6 +10,7 @@ from quart import jsonify, Quart, Response, g
 from api.auth_api import create_blueprint
 from services.accounts.api.auth_api_view import AuthApiView
 import api.auth_api_view as auth_api_view
+from passlib.hash import bcrypt
 
 
 class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
@@ -294,9 +295,7 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
         username = "nopw_user"
         email = "nopw@example.com"
 
-        with patch.object(auth_api_view.bcrypt, "hashpw") as mock_hashpw, \
-             patch.object(auth_api_view.bcrypt, "gensalt") as mock_gensalt:
-
+        with patch.object(auth_api_view.bcrypt, "hash") as mock_hashpw:
             # Act
             async with app.test_request_context("/x", method="POST"):
                 g.db = mock_db
@@ -309,7 +308,6 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
 
         # Assert: bcrypt should NOT be called when no password is provided
         mock_hashpw.assert_not_called()
-        mock_gensalt.assert_not_called()
 
         # DB execute was awaited once
         mock_db.execute.assert_awaited_once()
@@ -328,7 +326,7 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(args[2], username)
         self.assertEqual(args[3], email)
         self.assertIsNone(args[4])                 # password_hash is None
-        self.assertEqual(args[5], "FALSE")         # email_verified -> "FALSE"
+        self.assertEqual(args[5], False)         # email_verified -> "FALSE"
 
         ts = args[6]
         self.assertIsInstance(ts, datetime)
@@ -344,8 +342,7 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
         password = "s3cr3t"
 
         # Make bcrypt deterministic & fast
-        with patch.object(auth_api_view.bcrypt, "gensalt", return_value=b"salt") as mock_gensalt, \
-             patch.object(auth_api_view.bcrypt, "hashpw", return_value=b"hashedpw") as mock_hashpw:
+        with patch.object(auth_api_view.bcrypt, "hash", return_value=b"hashedpw") as mock_hashpw:
 
             # Act
             async with app.test_request_context("/x", method="POST"):
@@ -358,12 +355,10 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
                 )
 
         # Assert bcrypt usage
-        mock_gensalt.assert_called_once()
         mock_hashpw.assert_called_once()
         # hashpw called with password bytes and salt bytes
         args_hash = mock_hashpw.call_args.args if hasattr(mock_hashpw.call_args, "args") else mock_hashpw.call_args[0]
-        self.assertEqual(args_hash[0], password.encode())
-        self.assertEqual(args_hash[1], b"salt")
+        self.assertEqual(args_hash[0], password)
 
         # DB execute was awaited once
         mock_db.execute.assert_awaited_once()
@@ -379,8 +374,8 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(args[2], username)
         self.assertEqual(args[3], email)
-        self.assertEqual(args[4], "hashedpw")      # decoded hashed password
-        self.assertEqual(args[5], "TRUE")          # email_verified -> "TRUE"
+        self.assertEqual(args[4], b"hashedpw")
+        self.assertEqual(args[5], True)
 
         ts = args[6]
         self.assertIsInstance(ts, datetime)
@@ -479,3 +474,142 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
         ts = args[8]
         self.assertIsInstance(ts, datetime)
         self.assertEqual(ts.tzinfo, timezone.utc)
+
+    async def test_login_password_invalid_json_body(self):
+        """Should return 400 if request JSON is invalid"""
+        app = Quart(__name__)
+
+        async with app.test_request_context(
+            path="/auth/login_password",
+            method="POST",
+            json=None,  # simulate missing/invalid JSON
+        ):
+            response, status = await self.auth_view.login_password()
+            self.assertEqual(status, HTTPStatus.BAD_REQUEST)
+            self.assertIn("error", (await response.get_json()))
+
+    async def test_login_password_user_not_found(self):
+        """Should return 401 if no user exists"""
+        app = Quart(__name__)
+        fake_db = AsyncMock()
+        fake_db.fetchrow.return_value = None
+
+        async with app.test_request_context(
+            path="/auth/login_password",
+            method="POST",
+            json={"username_or_email": "bob", "password": "secret"},
+        ):
+            g.db = fake_db
+            response, status = await self.auth_view.login_password()
+            self.assertEqual(status, HTTPStatus.UNAUTHORIZED)
+            self.assertIn("Invalid credentials", (await response.get_json())["error"])
+
+    async def test_login_password_inactive_user(self):
+        """Should return 403 if user is inactive"""
+        app = Quart(__name__)
+
+        KNOWN_SECRET_HASH = "$2b$12$CjWS5UHzH5zT0eElA2uY0O6SPo6e7i/VR0su5s.7Z6l0xGmV/0ae6"
+
+        fake_user = {
+            "id": uuid.uuid4(),
+            "username": "bob",
+            "email": "bob@example.com",
+            "password_hash": KNOWN_SECRET_HASH,
+            "is_active": False,
+            "is_verified": False,
+        }
+        fake_db = AsyncMock()
+        fake_db.fetchrow.return_value = fake_user
+
+        async with app.test_request_context(
+            path="/auth/login_password",
+            method="POST",
+            json={"username_or_email": "bob", "password": "secret"},
+        ):
+            g.db = fake_db
+            response, status = await self.auth_view.login_password()
+            self.assertEqual(status, HTTPStatus.FORBIDDEN)
+            self.assertIn("Account disabled", (await response.get_json())["error"])
+
+    @patch("services.accounts.api.auth_api_view.bcrypt.verify", return_value=False)
+    async def test_login_password_wrong_password(self, mock_verify):
+        """Should return 401 if password does not match"""
+        app = Quart(__name__)
+
+        fake_user = {
+            "id": uuid.uuid4(),
+            "username": "bob",
+            "email": "bob@example.com",
+            "password_hash": "fakehash",
+            "is_active": True,
+            "is_verified": False,
+        }
+        fake_db = AsyncMock()
+        fake_db.fetchrow.return_value = fake_user
+
+        async with app.test_request_context(
+            path="/auth/login_password",
+            method="POST",
+            json={"username_or_email": "bob", "password": "wrong"},
+        ):
+            g.db = fake_db
+            response, status = await self.auth_view.login_password()
+
+            self.assertEqual(status, HTTPStatus.UNAUTHORIZED)
+            body = await response.get_json()
+            self.assertIn("Invalid credentials", body["error"])
+
+    @patch("services.accounts.api.auth_api_view.bcrypt.verify", return_value=True)
+    async def test_login_password_successful_login(self, mock_verify):
+        """Should return 200 and user details if login succeeds"""
+        app = Quart(__name__)
+        user_id = uuid.uuid4()
+
+        fake_user = {
+            "id": user_id,
+            "username": "bob",
+            "email": "bob@example.com",
+            "password_hash": "fakehash",
+            "is_active": True,
+            "is_verified": True,
+        }
+        fake_db = AsyncMock()
+        fake_db.fetchrow.return_value = fake_user
+        fake_db.execute.return_value = None  # simulate update last_login
+
+        async with app.test_request_context(
+            path="/auth/login_password",
+            method="POST",
+            json={"username_or_email": "bob", "password": "secret"},
+        ):
+            g.db = fake_db
+            response, status = await self.auth_view.login_password()
+
+            self.assertEqual(status, HTTPStatus.OK)
+
+            body = await response.get_json()
+            self.assertEqual(body["user_id"], str(user_id))
+            self.assertEqual(body["username"], "bob")
+            self.assertEqual(body["email"], "bob@example.com")
+            self.assertTrue(body["is_verified"])
+            self.assertEqual(body["message"], "Login successful")
+
+    @patch("services.accounts.api.auth_api_view.bcrypt.verify")
+    async def test_login_password_invalid_request_body(self, mock_verify):
+        """Should return 400 if request body does not match PasswordLoginRequest"""
+        app = Quart(__name__)
+        fake_db = AsyncMock()
+        fake_db.fetchrow.return_value = None
+
+        async with app.test_request_context(
+                path="/auth/login_password",
+                method="POST",
+                json={"username_or_email": "bob"},  # ❌ missing "password"
+        ):
+            g.db = fake_db
+            response, status = await self.auth_view.login_password()
+
+            self.assertEqual(status, HTTPStatus.BAD_REQUEST)
+            body = await response.get_json()
+            self.assertIn("error", body)
+            self.assertIn("password", body["error"])  # pydantic error mentions the missing field

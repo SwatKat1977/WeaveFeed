@@ -35,4 +35,10 @@ def create_blueprint(logger: logging.Logger) -> Blueprint:
     async def auth_signup_password_request():
         return await view.signup_password()
 
+    logger.debug("=> /auth/login_password [POST]")
+
+    @blueprint.route("/login_password", methods=["POST"])
+    async def auth_login_password_request():
+        return await view.login_password()
+
     return blueprint
