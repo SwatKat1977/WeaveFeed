@@ -593,3 +593,23 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(body["email"], "bob@example.com")
             self.assertTrue(body["is_verified"])
             self.assertEqual(body["message"], "Login successful")
+
+    @patch("services.accounts.api.auth_api_view.bcrypt.verify")
+    async def test_login_password_invalid_request_body(self, mock_verify):
+        """Should return 400 if request body does not match PasswordLoginRequest"""
+        app = Quart(__name__)
+        fake_db = AsyncMock()
+        fake_db.fetchrow.return_value = None
+
+        async with app.test_request_context(
+                path="/auth/login_password",
+                method="POST",
+                json={"username_or_email": "bob"},  # ❌ missing "password"
+        ):
+            g.db = fake_db
+            response, status = await self.auth_view.login_password()
+
+            self.assertEqual(status, HTTPStatus.BAD_REQUEST)
+            body = await response.get_json()
+            self.assertIn("error", body)
+            self.assertIn("password", body["error"])  # pydantic error mentions the missing field
