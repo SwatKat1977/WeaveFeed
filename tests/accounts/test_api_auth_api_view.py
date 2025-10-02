@@ -559,19 +559,17 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(status, HTTPStatus.UNAUTHORIZED)
             self.assertIn("Invalid credentials", (await response.get_json())["error"])
 
-    async def test_login_password_successful_login(self):
+    @patch("services.accounts.api.auth_api_view.bcrypt.verify", return_value=True)
+    async def test_login_password_successful_login(self, mock_verify):
         """Should return 200 and user details if login succeeds"""
         app = Quart(__name__)
         user_id = uuid.uuid4()
-
-        # Using 'known hash' due to bug in passlib
-        KNOWN_SECRET_HASH = "$2b$12$CjWS5UHzH5zT0eElA2uY0O6SPo6e7i/VR0su5s.7Z6l0xGmV/0ae6"
 
         fake_user = {
             "id": user_id,
             "username": "bob",
             "email": "bob@example.com",
-            "password_hash": KNOWN_SECRET_HASH,
+            "password_hash": "fakehash",
             "is_active": True,
             "is_verified": True,
         }
@@ -586,6 +584,7 @@ class TestCreateBlueprint(unittest.IsolatedAsyncioTestCase):
         ):
             g.db = fake_db
             response, status = await self.auth_view.login_password()
+
             self.assertEqual(status, HTTPStatus.OK)
 
             body = await response.get_json()
