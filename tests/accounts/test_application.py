@@ -36,7 +36,7 @@ class TestApplication(unittest.IsolatedAsyncioTestCase):
         with patch("builtins.print") as mock_print:
             ok = await app._initialise()
         self.assertFalse(ok)
-        mock_print.assert_called_once_with("[FATAL ERROR] Configuration file missing!")
+        mock_print.assert_called_once_with("[FATAL ERROR] Configuration file missing!", flush=True)
 
     # ---------- _initialise: configuration ValueError path ----------
     @patch.dict(os.environ, {}, clear=True)
