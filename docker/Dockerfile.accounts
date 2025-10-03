@@ -35,8 +35,8 @@ ENV QUART_APP=accounts
 EXPOSE 6050
 
 # Default command (can be overridden)
-CMD ["sh", "-c", "if [ \"WEAVEFEED_ENVIRONMENT\" = \"production\" ]; then \
-    exec uvicorn main:app --host 0.0.0.0 --port 6050; \
+CMD ["sh", "-c", "if [ \"$WEAVEFEED_ENVIRONMENT\" = \"production\" ]; then \
+    exec uvicorn accounts:app --host 0.0.0.0 --port 6050 --lifespan on; \
 else \
     exec python -m quart run -p 6050 -h 0.0.0.0 --reload; \
 fi"]
