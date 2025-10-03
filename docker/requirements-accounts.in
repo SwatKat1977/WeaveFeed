@@ -3,3 +3,4 @@ asyncpg
 passlib[bcrypt]
 pydantic
 pydantic[email]
+uvicorn

@@ -47,7 +47,7 @@ class Application(BaseMicroserviceApplication):
             "WEAVEFEED_ACCOUNTS_CONFIG_FILE_REQUIRED",
             "false").lower() == "true"
         if not config_file and config_file_required:
-            print("[FATAL ERROR] Configuration file missing!")
+            print("[FATAL ERROR] Configuration file missing!", flush=True)
             return False
 
         self._config = Configuration()
