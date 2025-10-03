@@ -11,6 +11,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
+    networks:
+      - backend
     volumes:
       - ./data/accounts:/var/lib/postgresql/data
 
@@ -20,3 +22,22 @@ services:
     restart: always
     ports:
       - "8080:8080"
+    networks:
+      - backend
+
+  weavefeed_accounts:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.accounts
+    ports:
+      - 6050:6050
+    networks:
+      - backend
+    volumes:
+      - "${ACCOUNTS_CONFIG_FILE}:/usr/local/weavefeed/accounts.config"
+    env_file:
+      - .env
+
+networks:
+  backend:
+    driver: bridge
