@@ -8,6 +8,7 @@ root for full license details.
 import asyncio
 import logging
 import os
+import sys
 from weavefeed_common import __version__
 from weavefeed_common.configuration.configuration import Configuration
 from weavefeed_common.base_microservice_application \
@@ -30,9 +31,10 @@ class Application(BaseMicroserviceApplication):
         self._logger = logging.getLogger(__name__)
         log_format = logging.Formatter(LOGGING_LOG_FORMAT_STRING,
                                        LOGGING_DATETIME_FORMAT_STRING)
-        console_stream = logging.StreamHandler()
+        console_stream = logging.StreamHandler(sys.stdout)
         console_stream.setFormatter(log_format)
         self._logger.setLevel(LOGGING_DEFAULT_LOG_LEVEL)
+        self._logger.propagate = True
         self._logger.addHandler(console_stream)
 
     async def _initialise(self) -> bool:
