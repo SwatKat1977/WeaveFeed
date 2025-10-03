@@ -193,7 +193,7 @@ async def create_db_pool(config,
     """
     for attempt in range(1, retries + 1):
         try:
-            return await asyncpg.create_pool(
+            pool = await asyncpg.create_pool(
                 user=config.DB_USER,
                 password=config.DB_PASSWORD,
                 database=config.DB_NAME,
@@ -204,27 +204,35 @@ async def create_db_pool(config,
                 timeout=5.0
             )
 
+            print(f"[INFO] Connected to database {config.DB_NAME} "
+                  f"on {config.DB_HOST}:{config.DB_PORT} (attempt {attempt})",
+                  flush=True)
+
+            return pool
+
         except asyncpg.InvalidPasswordError:
             print("[FATAL] Database authentication failed (check user/"
-                  "password).")
+                  "password).", flush=True)
             break
 
         except asyncpg.InvalidCatalogNameError:
-            print(f"[FATAL] Database '{config.DB_NAME}' does not exist.")
+            print(f"[FATAL] Database '{config.DB_NAME}' does not exist.",
+                  flush=True)
             break
 
         except asyncpg.CannotConnectNowError:
             print("[FATAL] Database is starting up or cannot accept connections "
-                  "right now.")
+                  "right now.", flush=True)
 
         except asyncio.TimeoutError:
-            print("[FATAL] Database connection timed out.")
+            print("[FATAL] Database connection timed out.", flush=True)
 
         except OSError as ex:
-            print(f"[FATAL] Network/connection error: {ex}")
+            print(f"[FATAL] Database network/connection error: {ex}",
+                  flush=True)
 
         except asyncpg.PostgresError as ex:
-            print(f"[FATAL] General Postgres error: {ex}")
+            print(f"[FATAL] Database general Postgres error: {ex}", flush=True)
 
         # Retry-able errors
         delay = base_delay * (2 ** (attempt - 1))  # exponential backoff
@@ -232,11 +240,13 @@ async def create_db_pool(config,
         wait_time = delay + jitter
 
         if attempt < retries:
-            print(f"[INFO] Retrying in {wait_time:.1f}s...")
+            print(f"[INFO] Retrying database connection in "
+                  f"{wait_time:.1f}s...", flush=True)
             await asyncio.sleep(wait_time)
             continue
 
-        print("[FATAL] All retries exhausted. Could not connect to DB.")
+        print("[FATAL] All database retries exhausted. Could not connect!",
+              flush=True)
         break
 
     if app is not None:

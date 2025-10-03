@@ -8,6 +8,7 @@ root for full license details.
 import asyncio
 import logging
 import os
+import sys
 from weavefeed_common import __version__
 from weavefeed_common.configuration.configuration import Configuration
 from weavefeed_common.base_microservice_application \
@@ -30,9 +31,10 @@ class Application(BaseMicroserviceApplication):
         self._logger = logging.getLogger(__name__)
         log_format = logging.Formatter(LOGGING_LOG_FORMAT_STRING,
                                        LOGGING_DATETIME_FORMAT_STRING)
-        console_stream = logging.StreamHandler()
+        console_stream = logging.StreamHandler(sys.stdout)
         console_stream.setFormatter(log_format)
         self._logger.setLevel(LOGGING_DEFAULT_LOG_LEVEL)
+        self._logger.propagate = True
         self._logger.addHandler(console_stream)
 
     async def _initialise(self) -> bool:
@@ -40,12 +42,26 @@ class Application(BaseMicroserviceApplication):
                           __version__)
         self._logger.info("https://github.com/SwatKat1977/WeaveFeed")
 
+        # Acceptable values
+        truths: set = {"1", "true", "yes", "on"}
+        falses: set = {"0", "false", "no", "off"}
+
         config_file = os.getenv("WEAVEFEED_ACCOUNTS_CONFIG_FILE", None)
-        config_file_required: bool = os.getenv(
-            "WEAVEFEED_ACCOUNTS_CONFIG_FILE_REQUIRED",
-            "false").lower() == "true"
+        raw_required = os.getenv("WEAVEFEED_ACCOUNTS_CONFIG_FILE_REQUIRED",
+                                 "false").strip().lower()
+
+        if raw_required in truths:
+            config_file_required: bool = True
+        elif raw_required in falses:
+            config_file_required: bool = False
+        else:
+            print(f"[FATAL ERROR] Invalid value for "
+                  f"WEAVEFEED_ACCOUNTS_CONFIG_FILE_REQUIRED: '{raw_required}'",
+                  flush=True)
+            return False
+
         if not config_file and config_file_required:
-            print("[FATAL ERROR] Configuration file missing!")
+            print("[FATAL ERROR] Configuration file missing!", flush=True)
             return False
 
         self._config = Configuration()

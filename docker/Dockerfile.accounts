@@ -1,0 +1,42 @@
+FROM python:3.13.7-alpine
+
+# Build environment variables
+ARG oatpp_include_dir=/usr/local/include/oatpp-1.3.0/oatpp/
+ARG bin_dir=/items/src/lib
+ENV ITEMS_OATPP_INCLUDE_DIR=$oatpp_include_dir
+ENV ITEMS_BIN_DIR=$bin_dir
+
+# Add a user and group for Weavefeed and then setup file paths.
+RUN addgroup -S weavefeed && \
+    adduser -S weavefeed -G weavefeed && \
+    mkdir /usr/local/weavefeed &&  \
+    chown weavefeed:weavefeed /usr/local/weavefeed
+
+# Accounts Service [ACCOUNTS] dependencies
+COPY docker/requirements-accounts.txt .
+RUN apk add --no-cache && \
+    pip install --no-cache-dir -r requirements-accounts.txt && \
+    rm requirements-accounts.txt
+
+USER weavefeed
+
+# Copy base files into Docker image.
+COPY --chown=weavefeed:weavefeed services/accounts /usr/local/weavefeed/accounts
+COPY --chown=weavefeed:weavefeed common /usr/local/weavefeed/common
+
+# Configure the environment
+WORKDIR /usr/local/weavefeed
+ENV PYTHONPATH="${PYTHONPATH}:/usr/local/weavefeed/accounts:/usr/local/weavefeed/common"
+ENV WEAVEFEED_ACCOUNTS_CONFIG_FILE=/usr/local/weavefeed/accounts.config
+ENV WEAVEFEED_ACCOUNTS_CONFIG_FILE_REQUIRED=1
+ENV WEAVEFEED_ENVIRONMENT="development"
+ENV QUART_APP=accounts
+
+EXPOSE 6050
+
+# Default command (can be overridden)
+CMD ["sh", "-c", "if [ \"$WEAVEFEED_ENVIRONMENT\" = \"production\" ]; then \
+    exec uvicorn accounts:app --host 0.0.0.0 --port 6050 --lifespan on; \
+else \
+    exec python -m quart run -p 6050 -h 0.0.0.0 --reload; \
+fi"]
