@@ -18,8 +18,8 @@ pip install:
 * alembic
 * psycopg2
 * passlib[bcrypt]
-* pyd*antic
-* pydantic[email]*
+* pydantic
+* pydantic[email]
 
 ** Initialising Alembic **
 
