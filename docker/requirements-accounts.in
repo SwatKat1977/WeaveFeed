@@ -1,0 +1,5 @@
+quart
+asyncpg
+passlib[bcrypt]
+pydantic
+pydantic[email]

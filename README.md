@@ -18,8 +18,8 @@ pip install:
 * alembic
 * psycopg2
 * passlib[bcrypt]
-* pydantic
-* pydantic[email]
+* pyd*antic
+* pydantic[email]*
 
 ** Initialising Alembic **
 
@@ -81,3 +81,11 @@ To recreate the database
 DROP DATABASE accounts;
 CREATE DATABASE accounts;
 ```
+
+### Building
+
+You need the following:
+* pip libraries: pip-tools
+* Docker
+
+docker build --file docker\Dockerfile.accounts . -t weavefeed_accounts
