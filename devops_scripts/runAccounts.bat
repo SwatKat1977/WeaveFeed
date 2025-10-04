@@ -12,6 +12,6 @@ SET WEAVEFEED_ACCOUNTS_DB_PASSWORD=Weavefeed_2025
 SET WEAVEFEED_ACCOUNTS_DB_NAME=accounts
 SET WEAVEFEED_ACCOUNTS_DB_HOST=127.0.0.1
 
-call python -m quart run -p 2222
+call python -m quart run -p 6050
 
 ENDLOCAL
