@@ -18,6 +18,7 @@ from weavefeed_common.logging_consts import LOGGING_DATETIME_FORMAT_STRING, \
                                             LOGGING_LOG_FORMAT_STRING
 from api import create_routes
 from configuration_layout import CONFIGURATION_LAYOUT
+from state_object import StateObject
 
 
 class Application(BaseMicroserviceApplication):
@@ -27,6 +28,7 @@ class Application(BaseMicroserviceApplication):
         super().__init__()
         self._quart_instance = quart_instance
         self._config = None
+        self._state_object: StateObject = StateObject()
 
         self._logger = logging.getLogger(__name__)
         log_format = logging.Formatter(LOGGING_LOG_FORMAT_STRING,
@@ -79,6 +81,9 @@ class Application(BaseMicroserviceApplication):
         self._logger.setLevel(self._config.get_entry("logging", "log_level"))
 
         self._display_configuration_details()
+
+        # Set the version string on state object.
+        self._state_object.version = __version__
 
         self._quart_instance.register_blueprint(create_routes(self._logger))
 
