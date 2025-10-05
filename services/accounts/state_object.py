@@ -9,6 +9,7 @@ import time
 from dataclasses import dataclass, field
 from weavefeed_common.service_health_enums import ComponentDegradationLevel
 
+
 @dataclass
 class StateObject:
     """
