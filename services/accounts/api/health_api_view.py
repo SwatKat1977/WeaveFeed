@@ -55,18 +55,7 @@ class HealthApiView(BaseApiView):
                             dependency statuses, current issues (if any), uptime, and version.
         """
         uptime: int = int(time.time()) - self._state_object.startup_time
-
         issues: list = []
-
-        """
-        database_health: ComponentDegradationLevel = ComponentDegradationLevel.NONE
-        database_health_state_str: str = ""
-
-        self._state_object.service_health.
-        """
-
-        self._state_object.database_health = ComponentDegradationLevel.FULLY_DEGRADED
-        self._state_object.database_health_state_str = "Wibble wobble"
 
         # Check database health
         if self._state_object.database_health != \
@@ -104,7 +93,6 @@ class HealthApiView(BaseApiView):
             "version": self._state_object.version
         }
 
-        print(f"Response: {response}")
         return Response(json.dumps(response),
                         status=http.HTTPStatus.OK,
                         content_type="application/json")
