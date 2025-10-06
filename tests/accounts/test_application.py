@@ -1,15 +1,13 @@
-# tests/test_application.py
 import unittest
 import logging
-from http import HTTPStatus  # not used, but common in this repo
 from unittest.mock import patch, MagicMock, AsyncMock, call
+import types
 from quart import Quart, Blueprint
 from contextlib import ExitStack
 import os
-
-# ⬇️ CHANGE THIS to your actual module path for the Application class.
 import services.accounts.application as app_mod
 from services.accounts.application import Application
+import services.accounts.__init__ as accounts
 
 
 class TestApplication(unittest.IsolatedAsyncioTestCase):
@@ -88,7 +86,7 @@ class TestApplication(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(ok)
         app._logger.setLevel.assert_called_once_with("INFO")
         mock_display.assert_called_once()
-        mock_create_routes.assert_called_once_with(app._logger)
+        mock_create_routes.assert_called_once_with(app._logger, app._state_object)
         mock_register.assert_called_once_with(fake_bp)
 
     # ---------- _main_loop ----------
@@ -104,6 +102,25 @@ class TestApplication(unittest.IsolatedAsyncioTestCase):
         # Just ensure it doesn't raise and returns None
         result = await app._shutdown()
         self.assertIsNone(result)
+
+    @patch("services.accounts.__init__.SERVICE_APP")
+    async def test_shutdown_with_app_none(self, mock_service_app):
+        original_app = accounts.app
+        fake_pool = AsyncMock()
+
+        try:
+            with patch.multiple(
+                    "services.accounts.__init__",
+                    app=None,
+                    cancel_background_tasks=AsyncMock()
+            ):
+                # manually inject fake db_pool so close() works
+                setattr(accounts, "app", types.SimpleNamespace(db_pool=fake_pool))
+                await accounts.shutdown()
+
+            fake_pool.close.assert_awaited_once()
+        finally:
+            accounts.app = original_app
 
     # ---------- _display_configuration_details ----------
     async def test_display_configuration_details_logs_expected_lines(self):
