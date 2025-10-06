@@ -85,7 +85,8 @@ class Application(BaseMicroserviceApplication):
         # Set the version string on state object.
         self._state_object.version = __version__
 
-        self._quart_instance.register_blueprint(create_routes(self._logger))
+        self._quart_instance.register_blueprint(create_routes(
+            self._logger, self._state_object))
 
         return True
 
