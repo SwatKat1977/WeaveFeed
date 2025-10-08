@@ -8,9 +8,12 @@ root for full license details.
 import logging
 import quart
 from .auth_api import create_blueprint as create_auth_bp
+from .health_api import create_blueprint as create_health_bp
+from state_object import StateObject
 
 
-def create_routes(logger: logging.Logger) -> quart.Blueprint:
+def create_routes(logger: logging.Logger,
+                  state_object: StateObject) -> quart.Blueprint:
     """
     Create and configure the API route blueprint for the application.
 
@@ -26,7 +29,9 @@ def create_routes(logger: logging.Logger) -> quart.Blueprint:
     """
     api_bp = quart.Blueprint("api_routes", __name__)
 
-    api_bp.register_blueprint(create_auth_bp(logger),
+    api_bp.register_blueprint(create_health_bp(logger, state_object))
+
+    api_bp.register_blueprint(create_auth_bp(logger, state_object),
                               url_prefix="/auth")
 
     return api_bp

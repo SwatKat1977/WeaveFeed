@@ -1,7 +1,7 @@
 import http
 import unittest
 import logging
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 from quart import Quart, Blueprint
 import api as accounts_api
 from api import auth_api
@@ -19,6 +19,8 @@ class TestCreateRoutes(unittest.IsolatedAsyncioTestCase):
         # Build a fake auth blueprint with a real route so we can verify mount point
         fake_auth_bp = Blueprint("auth_api", __name__)
 
+        mock_state_object = MagicMock()
+
         @fake_auth_bp.route("/ping")
         async def ping():
             return "ok"
@@ -26,7 +28,7 @@ class TestCreateRoutes(unittest.IsolatedAsyncioTestCase):
         mock_create_auth_bp.return_value = fake_auth_bp
 
         # Call function under test
-        blueprint = accounts_api.create_routes(self.logger)
+        blueprint = accounts_api.create_routes(self.logger, mock_state_object)
 
         # Basic assertions
         self.assertIsInstance(blueprint, Blueprint)

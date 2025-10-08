@@ -8,9 +8,11 @@ root for full license details.
 import logging
 from quart import Blueprint
 from api.auth_api_view import AuthApiView
+from state_object import StateObject
 
 
-def create_blueprint(logger: logging.Logger) -> Blueprint:
+def create_blueprint(logger: logging.Logger,
+                     state_object: StateObject) -> Blueprint:
     """
     Creates and registers a Quart Blueprint for handling authentication.
 
@@ -23,7 +25,7 @@ def create_blueprint(logger: logging.Logger) -> Blueprint:
     Returns:
         Blueprint: A Quart `Blueprint` object containing the registered route.
     """
-    view = AuthApiView(logger)
+    view = AuthApiView(logger, state_object)
 
     blueprint = Blueprint('auth_api', __name__)
 
