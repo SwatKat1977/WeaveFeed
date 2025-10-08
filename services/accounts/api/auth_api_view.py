@@ -183,52 +183,17 @@ class AuthApiView(BaseApiView):
                 - 403 Forbidden: Account disabled.
         """
         data = await quart.request.get_json()
-
-        if not data:
-            return quart.jsonify({"error": "Invalid or missing JSON body"}), \
-                HTTPStatus.BAD_REQUEST
-
         try:
             req = PasswordLoginRequest(**data)
-        except ValidationError as e:
-            return quart.jsonify({"error": str(e)}), HTTPStatus.BAD_REQUEST
+        except ValidationError as ex:
+            return quart.jsonify({"error": str(ex)}), HTTPStatus.BAD_REQUEST
 
-        # Find user by username OR email
-        user = await quart.g.db.fetchrow(
-            """
-            SELECT id, username, email, password_hash, is_active, is_verified
-            FROM users
-            WHERE username = $1 OR email = $1
-            """,
-            req.username_or_email,
-        )
+        db = quart.g.db
+        user_dal = UserDataAccessLayer(db, self._logger, self._state_object)
+        user_service = UserDataService(user_dal, self._state_object)
 
-        if not user:
-            return quart.jsonify({"error": "Invalid credentials"}), \
-                HTTPStatus.UNAUTHORIZED
-
-        if not user["is_active"]:
-            return quart.jsonify({"error": "Account disabled"}), \
-                HTTPStatus.FORBIDDEN
-
-        if not user["password_hash"] or not bcrypt.verify(
-                req.password, user["password_hash"]):
-            return quart.jsonify({"error": "Invalid credentials"}), \
-                HTTPStatus.UNAUTHORIZED
-
-        # Update last_login
-        await quart.g.db.execute(
-            "UPDATE users SET last_login=$1 WHERE id=$2",
-            datetime.utcnow(), user["id"]
-        )
-
-        return quart.jsonify({
-            "message": "Login successful",
-            "user_id": str(user["id"]),
-            "username": user["username"],
-            "email": user["email"],
-            "is_verified": user["is_verified"],
-        }), HTTPStatus.OK
+        result = await user_service.login_with_password(req.username_or_email, req.password)
+        return quart.jsonify({k: v for k, v in result.items() if k != "status"}), result["status"]
 
     async def _create_auth_provider(self,
                                     user_id: uuid.UUID,
@@ -260,4 +225,4 @@ class AuthApiView(BaseApiView):
             uuid.uuid4(), user_id, provider, provider_uid, access_token,
             refresh_token, expires_at, datetime.now(timezone.utc)
         )
-# 301
+# 263
