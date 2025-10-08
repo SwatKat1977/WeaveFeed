@@ -39,8 +39,8 @@ class UserDataAccessLayer(BaseDataAccessLayer):
             return existing
 
         except asyncpg.PostgresError as ex:
-            self._logger.exception("Database error while checking user "
-                                   "existence: %s", ex)
+            self._logger.error("Database error while checking user "
+                               "existence: %s", ex)
             self._state_object.database_health = \
                 ComponentDegradationLevel.FULLY_DEGRADED
             self._state_object.database_health_state_str = \
@@ -48,8 +48,8 @@ class UserDataAccessLayer(BaseDataAccessLayer):
             return None
 
         except Exception as ex:
-            self._logger.exception("Unexpected error checking user existence: "
-                                   "%s", ex)
+            self._logger.error("Unexpected error checking user existence: "
+                               "%s", ex)
             self._state_object.database_health = \
                 ComponentDegradationLevel.PART_DEGRADED
             self._state_object.database_health_state_str = \
@@ -81,7 +81,7 @@ class UserDataAccessLayer(BaseDataAccessLayer):
                 # Insert new user
                 await self._db.execute(
                     """
-                    INSERT INTO users(id, username, email, password_hash,
+                    INSERT INTO u__sers(id, username, email, password_hash,
                                       is_active, is_verified, created_at, updated_at)
                     VALUES ($1, $2, $3, $4, TRUE, $5, $6, $6)
                     """,
@@ -92,22 +92,31 @@ class UserDataAccessLayer(BaseDataAccessLayer):
                 return user_id
 
         except asyncpg.PostgresConnectionError:
-            self._logger.exception("Database connection error during user creation.")
+            self._logger.error("Database connection error during user creation.")
             self._state_object.database_health = \
                 ComponentDegradationLevel.FULLY_DEGRADED
             self._state_object.database_health_state_str = "Database unreachable"
             return None
 
         except asyncpg.PostgresError as e:
-            self._logger.exception("Database error during user creation: %s", e)
+            self._logger.error("Database error during user creation: %s", e)
             self._state_object.database_health = \
                 ComponentDegradationLevel.FULLY_DEGRADED
             self._state_object.database_health_state_str = \
                 "Database operation failed"
             return None
 
+        except asyncpg.exceptions.UndefinedTableError as ex:
+            self._logger.error(
+                "Database error (invalid table) during user creation: %s", ex)
+            self._state_object.database_health = \
+                ComponentDegradationLevel.FULLY_DEGRADED
+            self._state_object.database_health_state_str = \
+                f"Database error (invalid table) during user creation: {ex}"
+            return None
+
         except Exception as e:
-            self._logger.exception("Unexpected error creating user: %s", e)
+            self._logger.error("Unexpected error creating user: %s", e)
             self._state_object.service_health = \
                 ComponentDegradationLevel.FULLY_DEGRADED
             self._state_object.service_health_state_str = \
@@ -126,7 +135,7 @@ class UserDataAccessLayer(BaseDataAccessLayer):
                 """
                 SELECT id, username, email, password_hash, is_active,
                        is_verified
-                FROM users
+                FROM pusers
                 WHERE username = $1 OR email = $1
                 """,
                 identifier,
