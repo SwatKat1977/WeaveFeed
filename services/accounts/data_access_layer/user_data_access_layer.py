@@ -8,8 +8,8 @@ root for full license details.
 from datetime import datetime, timezone
 import uuid
 import asyncpg
-from weaverfeed_common.service_health_enums import ComponentDegradationLevel
-from weaverfeed_common.base_data_access_layer import BaseDataAccessLayer
+from weavefeed_common.service_health_enums import ComponentDegradationLevel
+from weavefeed_common.base_data_access_layer import BaseDataAccessLayer
 from state_object import StateObject
 
 
@@ -26,7 +26,7 @@ class UserDataAccessLayer(BaseDataAccessLayer):
         """
         try:
 
-            existing = await self.db_.fetchrow(
+            existing = await self._db.fetchrow(
                 """
                 SELECT id FROM users
                 WHERE username = $1 OR email = $2
@@ -42,7 +42,7 @@ class UserDataAccessLayer(BaseDataAccessLayer):
             self._logger.exception("Database error while checking user "
                                    "existence: %s", ex)
             self._state_object.database_health = \
-                ComponentDegradationLevel.DEGRADED
+                ComponentDegradationLevel.FULLY_DEGRADED
             self._state_object.database_health_state_str = \
                 f"Database error while checking user existence: {ex}"
             return None
@@ -51,7 +51,7 @@ class UserDataAccessLayer(BaseDataAccessLayer):
             self._logger.exception("Unexpected error checking user existence: "
                                    "%s", ex)
             self._state_object.database_health = \
-                ComponentDegradationLevel.DEGRADED
+                ComponentDegradationLevel.PART_DEGRADED
             self._state_object.database_health_state_str = \
                 f"Unexpected error checking user existence: {ex}"
             return None
@@ -65,7 +65,7 @@ class UserDataAccessLayer(BaseDataAccessLayer):
         now = datetime.now(timezone.utc)
 
         try:
-            async with (self.db_.transaction()):
+            async with (self._db.transaction()):
                 # Update health at the start (assuming DB connection is fine so far)
                 if self._state_object.database_health != \
                         ComponentDegradationLevel.FULLY_DEGRADED:
@@ -79,7 +79,7 @@ class UserDataAccessLayer(BaseDataAccessLayer):
                     return None
 
                 # Insert new user
-                await self.db_.execute(
+                await self._db.execute(
                     """
                     INSERT INTO users(id, username, email, password_hash,
                                       is_active, is_verified, created_at, updated_at)
@@ -101,7 +101,7 @@ class UserDataAccessLayer(BaseDataAccessLayer):
         except asyncpg.PostgresError as e:
             self._logger.exception("Database error during user creation: %s", e)
             self._state_object.database_health = \
-                ComponentDegradationLevel.DEGRADED
+                ComponentDegradationLevel.FULLY_DEGRADED
             self._state_object.database_health_state_str = \
                 "Database operation failed"
             return None
@@ -109,7 +109,7 @@ class UserDataAccessLayer(BaseDataAccessLayer):
         except Exception as e:
             self._logger.exception("Unexpected error creating user: %s", e)
             self._state_object.service_health = \
-                ComponentDegradationLevel.DEGRADED
+                ComponentDegradationLevel.FULLY_DEGRADED
             self._state_object.service_health_state_str = \
                 "Service experienced unexpected failure"
             return None
@@ -122,7 +122,7 @@ class UserDataAccessLayer(BaseDataAccessLayer):
         Updates StateObject to reflect database health.
         """
         try:
-            user = await self.db_.fetchrow(
+            user = await self._db.fetchrow(
                 """
                 SELECT id, username, email, password_hash, is_active,
                        is_verified
@@ -166,14 +166,15 @@ class UserDataAccessLayer(BaseDataAccessLayer):
             self._logger.exception("Database query error during user lookup: "
                                    "%s", ex)
             self._state_object.database_health = \
-                ComponentDegradationLevel.DEGRADED
+                ComponentDegradationLevel.PART_DEGRADED
             self._state_object.database_health_state_str = \
                 "Database operation failed"
             return None
 
         except Exception as ex:
             self._logger.exception("Unexpected error fetching user: %s", ex)
-            self._state_object.service_health = ComponentDegradationLevel.DEGRADED
+            self._state_object.service_health = \
+                ComponentDegradationLevel.FULLY_DEGRADED
             self._state_object.service_health_state_str = \
                 "Service experienced unexpected failure"
             return None

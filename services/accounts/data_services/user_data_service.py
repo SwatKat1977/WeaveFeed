@@ -35,7 +35,6 @@ class UserDataService:
             email=email,
             password_hash=password_hash,
             verified=False,
-            state_object=self._state_object
         )
 
         if not user_id:

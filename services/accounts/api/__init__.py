@@ -31,7 +31,7 @@ def create_routes(logger: logging.Logger,
 
     api_bp.register_blueprint(create_health_bp(logger, state_object))
 
-    api_bp.register_blueprint(create_auth_bp(logger),
+    api_bp.register_blueprint(create_auth_bp(logger, state_object),
                               url_prefix="/auth")
 
     return api_bp
