@@ -10,9 +10,14 @@ import uuid
 import asyncpg
 from weaverfeed_common.service_health_enums import ComponentDegradationLevel
 from weaverfeed_common.base_data_access_layer import BaseDataAccessLayer
+from state_object import StateObject
 
 
 class UserDataAccessLayer(BaseDataAccessLayer):
+
+    def __init__(self, db, logger, state_object: StateObject):
+        super().__init__(db, logger)
+        self._state_object: StateObject = state_object
 
     async def check_user_exists(self, username: str, email: str):
         """
@@ -20,6 +25,7 @@ class UserDataAccessLayer(BaseDataAccessLayer):
         Returns the user's record if found, otherwise None.
         """
         try:
+
             existing = await self.db_.fetchrow(
                 """
                 SELECT id FROM users
@@ -35,28 +41,36 @@ class UserDataAccessLayer(BaseDataAccessLayer):
         except asyncpg.PostgresError as ex:
             self._logger.exception("Database error while checking user "
                                    "existence: %s", ex)
+            self._state_object.database_health = \
+                ComponentDegradationLevel.DEGRADED
+            self._state_object.database_health_state_str = \
+                f"Database error while checking user existence: {ex}"
             return None
 
         except Exception as ex:
             self._logger.exception("Unexpected error checking user existence: "
                                    "%s", ex)
+            self._state_object.database_health = \
+                ComponentDegradationLevel.DEGRADED
+            self._state_object.database_health_state_str = \
+                f"Unexpected error checking user existence: {ex}"
             return None
 
     async def create_user(self,
                           username: str,
                           email: str,
                           password_hash: str,
-                          verified: bool,
-                          state_object: "StateObject" = None):
+                          verified: bool):
         user_id = uuid.uuid4()
         now = datetime.now(timezone.utc)
 
         try:
-            async with self.db_.transaction():
+            async with (self.db_.transaction()):
                 # Update health at the start (assuming DB connection is fine so far)
-                if state_object:
-                    state_object.database_health = ComponentDegradationLevel.NONE
-                    state_object.database_health_state_str = "Database operational"
+                if self._state_object.database_health != \
+                        ComponentDegradationLevel.FULLY_DEGRADED:
+                    self._state_object.database_health = ComponentDegradationLevel.NONE
+                    self._state_object.database_health_state_str = "Database operational"
 
                 # Check for duplicates (extracted function)
                 existing = await self.check_user_exists(username, email)
@@ -79,28 +93,29 @@ class UserDataAccessLayer(BaseDataAccessLayer):
 
         except asyncpg.PostgresConnectionError:
             self._logger.exception("Database connection error during user creation.")
-            if state_object:
-                state_object.database_health = ComponentDegradationLevel.DOWN
-                state_object.database_health_state_str = "Database unreachable"
+            self._state_object.database_health = \
+                ComponentDegradationLevel.FULLY_DEGRADED
+            self._state_object.database_health_state_str = "Database unreachable"
             return None
 
         except asyncpg.PostgresError as e:
             self._logger.exception("Database error during user creation: %s", e)
-            if state_object:
-                state_object.database_health = ComponentDegradationLevel.DEGRADED
-                state_object.database_health_state_str = "Database operation failed"
+            self._state_object.database_health = \
+                ComponentDegradationLevel.DEGRADED
+            self._state_object.database_health_state_str = \
+                "Database operation failed"
             return None
 
         except Exception as e:
             self._logger.exception("Unexpected error creating user: %s", e)
-            if state_object:
-                state_object.service_health = ComponentDegradationLevel.DEGRADED
-                state_object.service_health_state_str = "Service experienced unexpected failure"
+            self._state_object.service_health = \
+                ComponentDegradationLevel.DEGRADED
+            self._state_object.service_health_state_str = \
+                "Service experienced unexpected failure"
             return None
 
     async def get_by_email_or_username(self,
-                                       identifier: str,
-                                       state_object: "StateObject" = None):
+                                       identifier: str):
         """
         Fetch a user record by email or username.
         Returns the record if found, otherwise None.
@@ -120,43 +135,45 @@ class UserDataAccessLayer(BaseDataAccessLayer):
             if user:
                 self._logger.info("User lookup successful for identifier: %s",
                                   identifier)
-                if state_object:
-                    state_object.database_health = \
+                if self._state_object.database_health != \
+                        ComponentDegradationLevel.FULLY_DEGRADED:
+                    self._state_object.database_health = \
                         ComponentDegradationLevel.NONE
-                    state_object.database_health_state_str = \
+                    self._state_object.database_health_state_str = \
                         "Database operational"
                 return user
             else:
                 self._logger.warning("User not found for identifier: %s",
                                      identifier)
-                if state_object:
-                    state_object.database_health = \
+                if self._state_object.database_health != \
+                        ComponentDegradationLevel.FULLY_DEGRADED:
+                    self._state_object.database_health = \
                         ComponentDegradationLevel.NONE
-                    state_object.database_health_state_str = \
+                    self._state_object.database_health_state_str = \
                         "Database operational (no match)"
                 return None
 
         except asyncpg.PostgresConnectionError:
             self._logger.exception(
                 "Database connection error during user lookup.")
-            if state_object:
-                state_object.database_health = \
-                    ComponentDegradationLevel.DOWN
-                state_object.database_health_state_str = "Database unreachable"
+            self._state_object.database_health = \
+                ComponentDegradationLevel.FULLY_DEGRADED
+            self._state_object.database_health_state_str = \
+                "Database unreachable"
             return None
 
         except asyncpg.PostgresError as ex:
             self._logger.exception("Database query error during user lookup: "
                                    "%s", ex)
-            if state_object:
-                state_object.database_health = ComponentDegradationLevel.DEGRADED
-                state_object.database_health_state_str = "Database operation failed"
+            self._state_object.database_health = \
+                ComponentDegradationLevel.DEGRADED
+            self._state_object.database_health_state_str = \
+                "Database operation failed"
             return None
 
         except Exception as ex:
             self._logger.exception("Unexpected error fetching user: %s", ex)
-            if state_object:
-                state_object.service_health = ComponentDegradationLevel.DEGRADED
-                state_object.service_health_state_str = \
-                    "Service experienced unexpected failure"
+            self._state_object.service_health = ComponentDegradationLevel.DEGRADED
+            self._state_object.service_health_state_str = \
+                "Service experienced unexpected failure"
             return None
